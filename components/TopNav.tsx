@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const LINKS = [
   { href: "/", label: "Cadastro" },
@@ -12,6 +13,26 @@ const LINKS = [
 
 export default function TopNav() {
   const path = usePathname();
+  const router = useRouter();
+  const [usuario, setUsuario] = useState<{ nome: string; role: string } | null>(null);
+
+  useEffect(() => {
+    if (path === "/login") return;
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => setUsuario(d.usuario))
+      .catch(() => {});
+  }, [path]);
+
+  async function sair() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    setUsuario(null);
+    router.replace("/login");
+    router.refresh();
+  }
+
+  if (path === "/login") return null;
+
   return (
     <header className="sticky top-0 z-30 border-b border-line/70 bg-cream/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-6 py-4 sm:flex-row sm:justify-between">
@@ -37,9 +58,19 @@ export default function TopNav() {
             })}
           </nav>
         </div>
-        <div className="hidden text-right sm:block">
-          <div className="font-display text-[15px] font-semibold text-rosa">Brinquedoteca</div>
-          <div className="text-[12px] text-ink-soft">R$ 25,00/hora · R$ 2,00/min excedente</div>
+
+        <div className="flex items-center gap-3">
+          {usuario && (
+            <span className="text-sm text-ink-soft">
+              Olá, <b className="font-display text-ink">{usuario.nome}</b>
+            </span>
+          )}
+          <button
+            onClick={sair}
+            className="rounded-full border border-line bg-white/60 px-4 py-1.5 font-display text-[13px] font-semibold text-ink-soft transition hover:border-rosa/50 hover:text-ink"
+          >
+            Sair
+          </button>
         </div>
       </div>
     </header>

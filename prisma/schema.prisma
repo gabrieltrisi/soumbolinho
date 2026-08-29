@@ -26,3 +26,13 @@ model Crianca {
 
   @@index([entrada])
 }
+
+/// Funcionário/operador do sistema (login).
+model Funcionario {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  usuario   String   @unique
+  senhaHash String
+  role      String   @default("atendente") // "admin" | "atendente"
+  createdAt DateTime @default(now())
+}
