@@ -61,7 +61,7 @@ function SeletorForma({ value, onChange }: { value: string; onChange: (v: string
 }
 
 export default function BrinquedotecaPage() {
-  const { lista, setLista } = useCriancas();
+  const { lista, setLista, capacidade } = useCriancas();
   const now = useNow();
   const [busca, setBusca] = useState("");
   const [checkout, setCheckout] = useState<Crianca | null>(null);
@@ -97,6 +97,9 @@ export default function BrinquedotecaPage() {
   }, [ativos]);
 
   const totalAtivos = useMemo(() => lista.filter((c) => !c.saida).length, [lista]);
+  const ocupacao = capacidade > 0 ? totalAtivos / capacidade : 0;
+  const corLotacao =
+    ocupacao >= 1 ? "bg-rosa/20 text-rosa-deep" : ocupacao >= 0.7 ? "bg-laranja/25 text-[#b5702a]" : "bg-teal/25 text-[#3d8b93]";
 
   async function checkout1(c: Crianca): Promise<Crianca> {
     const r = await fetch(`/api/criancas/${c.id}`, {
@@ -155,9 +158,14 @@ export default function BrinquedotecaPage() {
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">
-          Na brinquedoteca <span className="text-rosa">({totalAtivos})</span>
-        </h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">
+            Na brinquedoteca <span className="text-rosa">({totalAtivos})</span>
+          </h1>
+          <span className={`rounded-full px-3 py-1 font-display text-[13px] font-semibold ${corLotacao}`}>
+            Lotação {totalAtivos}/{capacidade}{ocupacao >= 1 ? " · lotado" : ""}
+          </span>
+        </div>
         <input
           className="w-full rounded-full border border-line bg-white/70 px-4 py-2.5 text-sm text-ink placeholder:text-ink-soft/70 transition focus:border-rosa focus:bg-white sm:w-72"
           value={busca}

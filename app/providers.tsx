@@ -8,6 +8,7 @@ type Ctx = {
   setLista: React.Dispatch<React.SetStateAction<Crianca[]>>;
   reload: () => Promise<void>;
   carregando: boolean;
+  capacidade: number;
 };
 
 const CriancasContext = createContext<Ctx | null>(null);
@@ -15,6 +16,7 @@ const CriancasContext = createContext<Ctx | null>(null);
 export function CriancasProvider({ children }: { children: React.ReactNode }) {
   const [lista, setLista] = useState<Crianca[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [capacidade, setCapacidade] = useState(25);
 
   const reload = useCallback(async () => {
     const r = await fetch("/api/criancas", { cache: "no-store" });
@@ -24,10 +26,16 @@ export function CriancasProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     reload();
+    fetch("/api/config")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.capacidade) setCapacidade(d.capacidade);
+      })
+      .catch(() => {});
   }, [reload]);
 
   return (
-    <CriancasContext.Provider value={{ lista, setLista, reload, carregando }}>
+    <CriancasContext.Provider value={{ lista, setLista, reload, carregando, capacidade }}>
       {children}
     </CriancasContext.Provider>
   );

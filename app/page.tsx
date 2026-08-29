@@ -13,7 +13,7 @@ const emptyResp = { nomeResponsavel: "", telefoneResponsavel: "", endereco: "" }
 const emptyChild = (): ChildRow => ({ nomeCrianca: "", idade: "", alergias: "" });
 
 export default function CadastroPage() {
-  const { lista, setLista } = useCriancas();
+  const { lista, setLista, capacidade } = useCriancas();
   const [resp, setResp] = useState({ ...emptyResp });
   const [criancas, setCriancas] = useState<ChildRow[]>([emptyChild()]);
   const [saving, setSaving] = useState(false);
@@ -22,6 +22,7 @@ export default function CadastroPage() {
   const [termoAceito, setTermoAceito] = useState(false);
   const [verTermo, setVerTermo] = useState(false);
 
+  const lotado = lista.filter((c) => !c.saida).length >= capacidade;
   const telDigits = soDigitos(resp.telefoneResponsavel);
   const historico = useMemo(() => {
     if (telDigits.length < 8) return [] as Crianca[];
@@ -109,6 +110,12 @@ export default function CadastroPage() {
           <Link href="/brinquedoteca" className="font-display text-sm font-semibold text-teal underline underline-offset-2 hover:text-ink">
             Ver na brinquedoteca →
           </Link>
+        </div>
+      )}
+
+      {lotado && (
+        <div className="mb-5 rounded-2xl border border-rosa/40 bg-rosa/10 px-5 py-3 text-sm font-semibold text-rosa-deep">
+          ⚠️ Brinquedoteca lotada ({capacidade}/{capacidade}). Confirme se há espaço antes de registrar.
         </div>
       )}
 
