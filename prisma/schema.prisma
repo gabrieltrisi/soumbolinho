@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// Check-in de uma criança na brinquedoteca.
+model Crianca {
+  id                  Int       @id @default(autoincrement())
+  nomeCrianca         String
+  idade               Int
+  endereco            String
+  telefoneResponsavel String
+  nomeResponsavel     String
+  alergias            String?
+  termoAceito         Boolean   @default(false)
+  entrada             DateTime  @default(now())
+  saida               DateTime?
+  valor               Float?
+  formaPagamento      String?
+  createdAt           DateTime  @default(now())
+
+  @@index([entrada])
+}

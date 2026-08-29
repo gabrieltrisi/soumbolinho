@@ -1,26 +1,36 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ---- Marca "só um bolinho" (cores extraídas do material oficial) ---- */
+@theme {
+  --color-cream: #fcf6ed;
+  --color-cream-2: #f6ecdd;
+  --color-rosa: #f18c9f;
+  --color-rosa-deep: #e5738a;
+  --color-amarelo: #f7c66d;
+  --color-laranja: #f19c47;
+  --color-lilas: #ab89bc;
+  --color-teal: #89bfc7;
+  --color-ink: #5a4551;
+  --color-ink-soft: #96828d;
+  --color-line: #ecdfce;
+
+  --font-display: var(--font-fredoka), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--color-cream);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Foco visível e acessível em toda a UI */
+:where(a, button, input, textarea, select):focus-visible {
+  outline: 2px solid var(--color-rosa-deep);
+  outline-offset: 2px;
 }
