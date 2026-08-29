@@ -43,3 +43,7 @@ next-env.d.ts
 # prisma sqlite
 prisma/dev.db
 prisma/dev.db-journal
+
+# arquivos de agente recriados pelo tooling
+AGENTS.md
+CLAUDE.md
