@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useCriancas } from "./providers";
 import { soDigitos, mascaraTelefone } from "@/lib/format";
@@ -8,6 +8,8 @@ import TermoModal from "@/components/TermoModal";
 import type { Crianca } from "@/lib/types";
 
 type ChildRow = { nomeCrianca: string; idade: string; alergias: string };
+type CriancaConhecida = { nomeCrianca: string; idade: number; alergias: string | null };
+type Sugestao = { responsavel: { nomeResponsavel: string; endereco: string } | null; criancas: CriancaConhecida[] };
 
 const emptyResp = { nomeResponsavel: "", telefoneResponsavel: "", endereco: "" };
 const emptyChild = (): ChildRow => ({ nomeCrianca: "", idade: "", alergias: "" });
@@ -24,26 +26,39 @@ export default function CadastroPage() {
 
   const lotado = lista.filter((c) => !c.saida).length >= capacidade;
   const telDigits = soDigitos(resp.telefoneResponsavel);
-  const historico = useMemo(() => {
-    if (telDigits.length < 8) return [] as Crianca[];
-    return lista.filter((c) => {
-      const d = soDigitos(c.telefoneResponsavel);
-      return d.length >= 8 && (d.includes(telDigits) || telDigits.includes(d));
-    });
-  }, [lista, telDigits]);
-  const responsavelSugerido = historico[0];
-  const criancasDoTelefone = useMemo(() => {
-    const seen = new Set<string>();
-    const out: Crianca[] = [];
-    for (const c of historico) {
-      const k = c.nomeCrianca.trim().toLowerCase();
-      if (!seen.has(k)) {
-        seen.add(k);
-        out.push(c);
-      }
+  const [sugestao, setSugestao] = useState<Sugestao>({ responsavel: null, criancas: [] });
+
+  // Reconhece cliente recorrente pelo telefone (consulta o servidor, com debounce).
+  useEffect(() => {
+    if (telDigits.length < 8) {
+      setSugestao({ responsavel: null, criancas: [] });
+      return;
     }
-    return out;
-  }, [historico]);
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/criancas/buscar?tel=${telDigits}`, { signal: ctrl.signal });
+        if (r.ok) setSugestao(await r.json());
+      } catch {
+        /* requisição cancelada */
+      }
+    }, 300);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [telDigits]);
+
+  // Preenche o responsável automaticamente ao reconhecer o telefone (sem sobrescrever o que já foi digitado).
+  useEffect(() => {
+    const s = sugestao.responsavel;
+    if (!s) return;
+    setResp((r) => ({
+      ...r,
+      nomeResponsavel: r.nomeResponsavel.trim() ? r.nomeResponsavel : s.nomeResponsavel,
+      endereco: r.endereco.trim() ? r.endereco : s.endereco || r.endereco,
+    }));
+  }, [sugestao]);
 
   const setR = (k: keyof typeof resp) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setResp((r) => ({ ...r, [k]: k === "telefoneResponsavel" ? mascaraTelefone(e.target.value) : e.target.value }));
@@ -52,9 +67,7 @@ export default function CadastroPage() {
   const addChild = () => setCriancas((cs) => [...cs, emptyChild()]);
   const removeChild = (i: number) => setCriancas((cs) => (cs.length > 1 ? cs.filter((_, j) => j !== i) : cs));
 
-  const preencherResponsavel = (c: Crianca) =>
-    setResp((r) => ({ ...r, nomeResponsavel: c.nomeResponsavel, endereco: c.endereco || r.endereco }));
-  const adicionarCriancaConhecida = (c: Crianca) =>
+  const adicionarCriancaConhecida = (c: CriancaConhecida) =>
     setCriancas((cs) => {
       const novo = { nomeCrianca: c.nomeCrianca, idade: String(c.idade), alergias: c.alergias ?? "" };
       const vazio = cs.findIndex((x) => !x.nomeCrianca.trim());
@@ -139,21 +152,34 @@ export default function CadastroPage() {
               <input className={inputCls} value={resp.endereco} onChange={setR("endereco")} placeholder="Rua, nº, bairro" />
             </div>
 
-            {responsavelSugerido && (
+            {sugestao.responsavel && (
               <div className="rounded-2xl border border-lilas/40 bg-lilas/12 px-4 py-3">
-                <div className="font-display text-[13px] font-semibold text-ink">📌 Cliente recorrente</div>
-                <button type="button" onClick={() => preencherResponsavel(responsavelSugerido)} className="mt-0.5 text-[13px] font-semibold text-lilas underline underline-offset-2 hover:text-ink">
-                  Preencher com dados de {responsavelSugerido.nomeResponsavel}
-                </button>
-                {criancasDoTelefone.length > 0 && (
+                <div className="font-display text-[13px] font-semibold text-ink">
+                  📌 Cliente recorrente — {sugestao.responsavel.nomeResponsavel}
+                </div>
+                {sugestao.criancas.length > 0 ? (
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    <span className="text-[12px] text-ink-soft">Adicionar:</span>
-                    {criancasDoTelefone.map((c) => (
-                      <button key={c.id} type="button" onClick={() => adicionarCriancaConhecida(c)} className="rounded-full border border-line bg-white/70 px-3 py-0.5 text-[12px] font-semibold text-ink transition hover:border-lilas">
-                        + {c.nomeCrianca}
-                      </button>
-                    ))}
+                    <span className="text-[12px] text-ink-soft">Toque para adicionar:</span>
+                    {sugestao.criancas.map((c) => {
+                      const jaAdd = criancas.some(
+                        (x) => x.nomeCrianca.trim().toLowerCase() === c.nomeCrianca.trim().toLowerCase(),
+                      );
+                      return (
+                        <button
+                          key={c.nomeCrianca}
+                          type="button"
+                          disabled={jaAdd}
+                          onClick={() => adicionarCriancaConhecida(c)}
+                          className="rounded-full border border-line bg-white/70 px-3 py-0.5 text-[12px] font-semibold text-ink transition hover:border-lilas disabled:opacity-40"
+                        >
+                          {jaAdd ? "✓ " : "+ "}
+                          {c.nomeCrianca}
+                        </button>
+                      );
+                    })}
                   </div>
+                ) : (
+                  <div className="mt-1 text-[12px] text-ink-soft">Responsável reconhecido — dados preenchidos.</div>
                 )}
               </div>
             )}
