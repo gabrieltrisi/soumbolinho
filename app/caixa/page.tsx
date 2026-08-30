@@ -120,6 +120,14 @@ export default function CaixaPage() {
               <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-line/70 bg-cream-2/40 px-4 py-3 text-sm">
                 <span className="font-display font-semibold text-ink">{c.nomeCrianca}</span>
                 <span className="text-ink-soft">{hora(c.entrada)}–{c.saida ? hora(c.saida) : ""} · {formatDuracao(min)}</span>
+                {c.motivoAjuste && (
+                  <span
+                    className="rounded-full bg-lilas/20 px-2.5 py-0.5 text-[12px] font-semibold text-lilas"
+                    title={c.valorTabela != null ? `Tabela ${formatBRL(c.valorTabela)}` : undefined}
+                  >
+                    🎁 {c.motivoAjuste}
+                  </span>
+                )}
                 <div className="ml-auto flex items-center gap-2.5">
                   {c.formaPagamento && (
                     <span className="rounded-full bg-cream-2 px-2.5 py-0.5 text-[12px] font-semibold text-ink-soft">

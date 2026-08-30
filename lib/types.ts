@@ -10,5 +10,7 @@ export type Crianca = {
   entrada: string;
   saida: string | null;
   valor: number | null;
+  valorTabela: number | null;
+  motivoAjuste: string | null;
   formaPagamento: string | null;
 };

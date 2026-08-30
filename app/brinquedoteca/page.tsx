@@ -38,6 +38,8 @@ const FORMAS = [
   { v: "Cartão", icon: "💳" },
 ];
 
+const MOTIVOS_RAPIDOS = ["Aniversariante", "Cortesia", "Valor combinado"];
+
 function SeletorForma({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <div className="mt-5">
@@ -71,6 +73,18 @@ export default function BrinquedotecaPage() {
   const [flash, setFlash] = useState<{ texto: string; recibo?: Crianca[] } | null>(null);
   const [editando, setEditando] = useState<Crianca | null>(null);
   const [removendo, setRemovendo] = useState<Crianca | null>(null);
+  // Ajuste de valor no check-out (cortesia, aniversariante, valor combinado).
+  const [ajustando, setAjustando] = useState(false);
+  const [valorAjuste, setValorAjuste] = useState("");
+  const [motivo, setMotivo] = useState("");
+
+  function abrirCheckout(c: Crianca) {
+    setForma("Dinheiro");
+    setAjustando(false);
+    setValorAjuste("");
+    setMotivo("");
+    setCheckout(c);
+  }
 
   const ativos = useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -101,22 +115,30 @@ export default function BrinquedotecaPage() {
   const corLotacao =
     ocupacao >= 1 ? "bg-rosa/20 text-rosa-deep" : ocupacao >= 0.7 ? "bg-laranja/25 text-[#b5702a]" : "bg-teal/25 text-[#3d8b93]";
 
-  async function checkout1(c: Crianca): Promise<Crianca> {
+  async function checkout1(c: Crianca, extra: Record<string, unknown> = {}): Promise<Crianca> {
     const r = await fetch(`/api/criancas/${c.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ formaPagamento: forma }),
+      body: JSON.stringify({ formaPagamento: forma, ...extra }),
     });
     return r.json();
   }
 
   async function confirmarSaida() {
     if (!checkout) return;
+    const extra: Record<string, unknown> = {};
+    if (ajustando) {
+      const v = Number(valorAjuste.replace(",", "."));
+      if (!Number.isFinite(v) || v < 0 || !motivo.trim()) return;
+      extra.valor = v;
+      extra.motivoAjuste = motivo.trim();
+    }
     setFinalizando(true);
     try {
-      const upd = await checkout1(checkout);
+      const upd = await checkout1(checkout, extra);
       setLista((l) => l.map((c) => (c.id === upd.id ? upd : c)));
-      setFlash({ texto: `${upd.nomeCrianca} saiu · cobrar ${formatBRL(upd.valor ?? 0)} 💰` });
+      const aviso = upd.motivoAjuste ? ` (${upd.motivoAjuste})` : "";
+      setFlash({ texto: `${upd.nomeCrianca} saiu · cobrar ${formatBRL(upd.valor ?? 0)}${aviso} 💰` });
       setTimeout(() => setFlash(null), 6000);
       setCheckout(null);
     } finally {
@@ -149,7 +171,7 @@ export default function BrinquedotecaPage() {
 
   const acoesMenu = (c: Crianca) => (
     <CardMenu>
-      <button className={menuItemCls} onClick={() => setCheckout(c)}>🏁 Finalizar</button>
+      <button className={menuItemCls} onClick={() => abrirCheckout(c)}>🏁 Finalizar</button>
       <button className={menuItemCls} onClick={() => setEditando(c)}>✏️ Editar</button>
       <button className={`${menuItemCls} text-rosa-deep`} onClick={() => setRemovendo(c)}>🗑️ Remover</button>
     </CardMenu>
@@ -263,7 +285,7 @@ export default function BrinquedotecaPage() {
                   {acoesMenu(c)}
                   <span className="rounded-full bg-cream-2 px-3 py-1 font-display text-[13px] font-semibold text-ink tabular-nums">⏱ {formatDuracao(min)}</span>
                   <span className="font-display text-lg font-bold text-teal tabular-nums">{formatBRL(val)}</span>
-                  <button onClick={() => setCheckout(c)} className="mt-1 rounded-full bg-lilas px-4 py-2 font-display text-[13px] font-semibold text-white transition hover:opacity-90">
+                  <button onClick={() => abrirCheckout(c)} className="mt-1 rounded-full bg-lilas px-4 py-2 font-display text-[13px] font-semibold text-white transition hover:opacity-90">
                     Finalizar
                   </button>
                 </div>
@@ -277,6 +299,10 @@ export default function BrinquedotecaPage() {
       {checkout && (() => {
         const min = minutosEntre(checkout.entrada, now);
         const val = calcularValor(min);
+        const vNum = Number(valorAjuste.replace(",", "."));
+        const vNumValido = Number.isFinite(vNum) && vNum >= 0;
+        const ajusteValido = !ajustando || (vNumValido && !!motivo.trim());
+        const cobrar = ajustando && vNumValido ? vNum : val;
         return (
           <div className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4 backdrop-blur-sm" onClick={() => setCheckout(null)}>
             <div className="w-full max-w-sm rounded-3xl border border-line bg-cream p-7 shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -291,14 +317,67 @@ export default function BrinquedotecaPage() {
                   <div className="h-10 w-px bg-line" />
                   <div>
                     <div className="text-[12px] font-semibold uppercase tracking-wide text-ink-soft">Cobrar</div>
-                    <div className="font-display text-3xl font-bold text-teal tabular-nums">{formatBRL(val)}</div>
+                    <div className="font-display text-3xl font-bold text-teal tabular-nums">{formatBRL(cobrar)}</div>
+                    {ajustando && cobrar !== val && (
+                      <div className="text-[12px] text-ink-soft line-through tabular-nums">tabela {formatBRL(val)}</div>
+                    )}
                   </div>
                 </div>
               </div>
+
               <SeletorForma value={forma} onChange={setForma} />
+
+              {!ajustando ? (
+                <button
+                  type="button"
+                  onClick={() => { setAjustando(true); setValorAjuste(String(val).replace(".", ",")); }}
+                  className="mt-4 w-full rounded-2xl border border-dashed border-lilas/50 py-2.5 font-display text-[13px] font-semibold text-lilas transition hover:bg-lilas/10"
+                >
+                  🎁 Ajustar valor (cortesia, aniversário...)
+                </button>
+              ) : (
+                <div className="mt-4 rounded-2xl border border-lilas/40 bg-lilas/10 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-display text-[13px] font-semibold text-ink">Valor ajustado</span>
+                    <button type="button" onClick={() => { setAjustando(false); setMotivo(""); }} className="text-[12px] font-semibold text-ink-soft underline underline-offset-2">
+                      remover ajuste
+                    </button>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="font-display text-lg font-bold text-ink">R$</span>
+                    <input
+                      inputMode="decimal"
+                      value={valorAjuste}
+                      onChange={(e) => setValorAjuste(e.target.value.replace(/[^\d.,]/g, ""))}
+                      className="w-28 rounded-xl border border-line bg-white px-3 py-2 font-display text-lg font-bold text-ink focus:border-lilas"
+                    />
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {MOTIVOS_RAPIDOS.map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setMotivo(m)}
+                        className={`rounded-full border px-3 py-1 text-[12px] font-semibold transition ${
+                          motivo === m ? "border-lilas bg-lilas/20 text-ink" : "border-line bg-white/70 text-ink-soft hover:border-lilas"
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    value={motivo}
+                    onChange={(e) => setMotivo(e.target.value)}
+                    placeholder="Motivo (obrigatório)"
+                    className="mt-2 w-full rounded-xl border border-line bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-soft/70 focus:border-lilas"
+                  />
+                </div>
+              )}
+
               <div className="mt-6 flex gap-3">
                 <button onClick={() => setCheckout(null)} className="flex-1 rounded-full border border-line bg-white/70 px-5 py-3 font-display text-[15px] font-semibold text-ink transition hover:bg-white">Cancelar</button>
-                <button onClick={confirmarSaida} disabled={finalizando} className="flex-1 rounded-full bg-rosa px-5 py-3 font-display text-[15px] font-semibold text-white transition hover:bg-rosa-deep disabled:opacity-60">
+                <button onClick={confirmarSaida} disabled={finalizando || !ajusteValido} className="flex-1 rounded-full bg-rosa px-5 py-3 font-display text-[15px] font-semibold text-white transition hover:bg-rosa-deep disabled:opacity-60">
                   {finalizando ? "..." : "Confirmar saída"}
                 </button>
               </div>

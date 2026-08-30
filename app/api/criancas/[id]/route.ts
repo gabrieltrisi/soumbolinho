@@ -14,7 +14,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (action === "reopen") {
     const upd = await prisma.crianca.update({
       where: { id: crianca.id },
-      data: { saida: null, valor: null, formaPagamento: null },
+      data: { saida: null, valor: null, valorTabela: null, motivoAjuste: null, formaPagamento: null },
     });
     return NextResponse.json(upd);
   }
@@ -23,9 +23,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (crianca.saida) return NextResponse.json(crianca);
   const saida = new Date();
   const minutos = minutosEntre(crianca.entrada, saida);
-  const valor = calcularValor(minutos);
+  const valorTabela = calcularValor(minutos);
   const formaPagamento = body?.formaPagamento ? String(body.formaPagamento) : null;
-  const upd = await prisma.crianca.update({ where: { id: crianca.id }, data: { saida, valor, formaPagamento } });
+
+  // Ajuste opcional (cortesia, aniversariante, valor combinado).
+  const valorInformado = Number(body?.valor);
+  const temAjuste =
+    body?.valor != null && Number.isFinite(valorInformado) && valorInformado >= 0 && valorInformado !== valorTabela;
+
+  const valor = temAjuste ? Math.round(valorInformado * 100) / 100 : valorTabela;
+  const upd = await prisma.crianca.update({
+    where: { id: crianca.id },
+    data: {
+      saida,
+      valor,
+      formaPagamento,
+      valorTabela: temAjuste ? valorTabela : null,
+      motivoAjuste: temAjuste ? String(body?.motivoAjuste ?? "").trim() || "Ajuste manual" : null,
+    },
+  });
   return NextResponse.json(upd);
 }
 

@@ -21,6 +21,8 @@ model Crianca {
   entrada             DateTime  @default(now())
   saida               DateTime?
   valor               Float?
+  valorTabela         Float?    // valor que a tabela cobraria (preenchido só quando houve ajuste)
+  motivoAjuste        String?   // motivo do desconto/cortesia (ex.: aniversariante)
   formaPagamento      String?
   createdAt           DateTime  @default(now())
 

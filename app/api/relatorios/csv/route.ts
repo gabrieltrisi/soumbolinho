@@ -44,6 +44,8 @@ export async function GET(req: NextRequest) {
       entrada: true,
       saida: true,
       valor: true,
+      valorTabela: true,
+      motivoAjuste: true,
       formaPagamento: true,
     },
   });
@@ -58,6 +60,8 @@ export async function GET(req: NextRequest) {
     "Saída",
     "Duração (min)",
     "Valor (R$)",
+    "Valor tabela (R$)",
+    "Motivo do ajuste",
     "Forma de pagamento",
   ];
 
@@ -74,12 +78,14 @@ export async function GET(req: NextRequest) {
       r.saida ? partesSP(r.saida).hora : "",
       dur,
       r.valor != null ? r.valor.toFixed(2).replace(".", ",") : "",
+      r.valorTabela != null ? r.valorTabela.toFixed(2).replace(".", ",") : "",
+      r.motivoAjuste ?? "",
       r.formaPagamento ?? "",
     ];
   });
 
   const total = regs.reduce((s, r) => s + (r.valor ?? 0), 0);
-  const rodape = ["", "", "", "", "", "", "", "TOTAL", total.toFixed(2).replace(".", ","), ""];
+  const rodape = ["", "", "", "", "", "", "", "TOTAL", total.toFixed(2).replace(".", ","), "", "", ""];
 
   const corpo = [cabecalho, ...linhas, rodape].map((cols) => cols.map(campo).join(";")).join("\r\n");
   const BOM = String.fromCharCode(0xfeff); // BOM para o Excel abrir em UTF-8
