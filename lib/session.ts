@@ -36,7 +36,7 @@ export async function verificarSessao(token: string): Promise<Sessao | null> {
 export const cookieOpts = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: "lax" as const,
+  sameSite: "strict" as const, // ferramenta interna: bloqueia envio cross-site (anti-CSRF)
   path: "/",
   maxAge: MAX_AGE,
 };

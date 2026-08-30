@@ -26,3 +26,13 @@ model Crianca {
 
   @@index([entrada])
 }
+
+/// Tentativas de login (para rate limiting / bloqueio por IP).
+model AcessoTentativa {
+  id       Int      @id @default(autoincrement())
+  ip       String
+  sucesso  Boolean  @default(false)
+  criadoEm DateTime @default(now())
+
+  @@index([ip, criadoEm])
+}
