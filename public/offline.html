@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sem conexão · só um bolinho</title>
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: #faf0e1;
+        color: #5a4551;
+      }
+      .card {
+        width: 100%;
+        max-width: 360px;
+        text-align: center;
+        background: #fff7ee;
+        border: 1px solid #ecdfd2;
+        border-radius: 28px;
+        padding: 40px 28px;
+        box-shadow: 0 18px 50px -30px rgba(90, 69, 81, 0.6);
+      }
+      .dot { font-size: 44px; line-height: 1; }
+      h1 { margin: 14px 0 6px; font-size: 22px; color: #4a3944; }
+      p { margin: 0 0 22px; font-size: 15px; color: #8a7681; line-height: 1.5; }
+      button {
+        border: 0;
+        cursor: pointer;
+        border-radius: 999px;
+        background: #e8859e;
+        color: #fff;
+        font-size: 15px;
+        font-weight: 600;
+        padding: 13px 26px;
+        transition: background 0.15s;
+      }
+      button:hover { background: #d96b86; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="dot">🎈</div>
+      <h1>Sem conexão</h1>
+      <p>Não foi possível carregar agora. Verifique a internet e tente de novo.</p>
+      <button onclick="location.reload()">Tentar novamente</button>
+    </div>
+  </body>
+</html>
