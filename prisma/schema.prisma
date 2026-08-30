@@ -38,3 +38,31 @@ model AcessoTentativa {
 
   @@index([ip, criadoEm])
 }
+
+/// Fechamento de caixa de um dia (conferência do dinheiro).
+model FechamentoCaixa {
+  id              Int      @id @default(autoincrement())
+  data            String   @unique // YYYY-MM-DD (dia em SP)
+  totalSistema    Float
+  totalDinheiro   Float
+  totalPix        Float
+  totalCartao     Float
+  atendimentos    Int
+  fundoInicial    Float    @default(0)
+  dinheiroContado Float?
+  divergencia     Float?
+  observacao      String?
+  fechadoPor      String?
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+}
+
+/// Snapshot diário de todos os dados (rede de segurança / backup).
+model Backup {
+  id       Int      @id @default(autoincrement())
+  data     String   @unique // YYYY-MM-DD
+  conteudo String // JSON completo
+  tamanho  Int
+  destino  String   @default("db")
+  criadoEm DateTime @default(now())
+}

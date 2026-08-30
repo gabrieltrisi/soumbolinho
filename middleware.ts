@@ -9,6 +9,9 @@ export async function middleware(req: NextRequest) {
   // rotas de auth sempre liberadas
   if (pathname.startsWith("/api/auth")) return NextResponse.next();
 
+  // backup via cron: a própria rota valida o CRON_SECRET (o cron não envia cookie)
+  if (pathname === "/api/backup/run") return NextResponse.next();
+
   // /login: se já logado, vai pra home
   if (pathname === "/login") {
     return sessao ? NextResponse.redirect(new URL("/", req.url)) : NextResponse.next();

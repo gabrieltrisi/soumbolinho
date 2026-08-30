@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCriancas, useNow } from "../providers";
 import Kpi from "@/components/Kpi";
 import CardMenu, { menuItemCls } from "@/components/CardMenu";
@@ -29,11 +29,43 @@ function whatsappComprovante(c: Crianca) {
 
 const FORMA_ICON: Record<string, string> = { Dinheiro: "💵", Pix: "📱", "Cartão": "💳" };
 
+type FechamentoRec = {
+  data: string;
+  totalSistema: number;
+  totalDinheiro: number;
+  atendimentos: number;
+  fundoInicial: number;
+  dinheiroContado: number | null;
+  divergencia: number | null;
+  observacao: string | null;
+  fechadoPor: string | null;
+};
+
 export default function CaixaPage() {
   const { lista, setLista } = useCriancas();
   const now = useNow();
   const [editando, setEditando] = useState<Crianca | null>(null);
   const [removendo, setRemovendo] = useState<Crianca | null>(null);
+  const [fecharAberto, setFecharAberto] = useState(false);
+  const [fechamento, setFechamento] = useState<FechamentoRec | null>(null);
+  const [fundo, setFundo] = useState("0");
+  const [contado, setContado] = useState("");
+  const [obsFech, setObsFech] = useState("");
+  const [salvandoFech, setSalvandoFech] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/caixa/fechamento")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.fechamento) {
+          setFechamento(d.fechamento);
+          setFundo(String(d.fechamento.fundoInicial ?? 0).replace(".", ","));
+          if (d.fechamento.dinheiroContado != null) setContado(String(d.fechamento.dinheiroContado).replace(".", ","));
+          setObsFech(d.fechamento.observacao ?? "");
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   async function reabrir(c: Crianca) {
     const r = await fetch(`/api/criancas/${c.id}`, {
@@ -74,14 +106,73 @@ export default function CaixaPage() {
     return acc;
   }, [finalizados]);
 
+  const fundoNum = Number(fundo.replace(",", ".")) || 0;
+  const esperadoDinheiro = fundoNum + porForma.Dinheiro;
+  const contadoNum = contado.trim() ? Number(contado.replace(",", ".")) : null;
+  const divergenciaPrevia = contadoNum != null && Number.isFinite(contadoNum) ? contadoNum - esperadoDinheiro : null;
+
+  async function salvarFechamento() {
+    setSalvandoFech(true);
+    try {
+      const r = await fetch("/api/caixa/fechamento", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fundoInicial: fundoNum,
+          dinheiroContado: contadoNum,
+          observacao: obsFech.trim() || null,
+        }),
+      });
+      const d = await r.json();
+      setFechamento(d.fechamento);
+      setFecharAberto(false);
+    } finally {
+      setSalvandoFech(false);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
-      <div className="mb-5">
-        <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">Caixa · Fechamento do dia</h1>
-        <p className="mt-1 text-ink-soft">
-          {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
-        </p>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">Caixa · Fechamento do dia</h1>
+          <p className="mt-1 text-ink-soft">
+            {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
+          </p>
+        </div>
+        <button
+          onClick={() => setFecharAberto(true)}
+          className={`flex-none rounded-full px-5 py-2.5 font-display text-[14px] font-semibold transition ${
+            fechamento
+              ? "border border-teal/50 bg-teal/10 text-[#3d8b93] hover:bg-teal/20"
+              : "bg-lilas text-white hover:opacity-90"
+          }`}
+        >
+          {fechamento ? "✓ Dia fechado · revisar" : "🔒 Fechar o dia"}
+        </button>
       </div>
+
+      {fechamento && (
+        <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl border border-teal/40 bg-teal/10 px-5 py-3 text-sm">
+          <span className="font-display font-semibold text-[#3d8b93]">✓ Caixa fechado</span>
+          {fechamento.fechadoPor && <span className="text-ink-soft">por {fechamento.fechadoPor}</span>}
+          {fechamento.divergencia != null && (
+            <span
+              className={`font-display font-semibold ${
+                Math.abs(fechamento.divergencia) < 0.01
+                  ? "text-[#3d8b93]"
+                  : fechamento.divergencia < 0
+                    ? "text-rosa-deep"
+                    : "text-[#b5702a]"
+              }`}
+            >
+              {Math.abs(fechamento.divergencia) < 0.01
+                ? "sem divergência"
+                : `divergência ${fechamento.divergencia > 0 ? "+" : ""}${formatBRL(fechamento.divergencia)}`}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi label="Crianças hoje" value={checkinsHoje} />
@@ -176,6 +267,69 @@ export default function CaixaPage() {
             <div className="mt-5 flex gap-3">
               <button onClick={() => setRemovendo(null)} className="flex-1 rounded-full border border-line bg-white/70 px-5 py-2.5 font-display text-[14px] font-semibold text-ink transition hover:bg-white">Cancelar</button>
               <button onClick={confirmarRemover} className="flex-1 rounded-full bg-rosa-deep px-5 py-2.5 font-display text-[14px] font-semibold text-white transition hover:opacity-90">Remover</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {fecharAberto && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4 backdrop-blur-sm" onClick={() => setFecharAberto(false)}>
+          <div className="w-full max-w-md rounded-3xl border border-line bg-cream p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="text-center">
+              <div className="font-display text-sm font-semibold uppercase tracking-wide text-ink-soft">Fechamento do dia</div>
+              <div className="mt-1 font-display text-xl font-bold text-ink">{new Date().toLocaleDateString("pt-BR")}</div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+              <div className="rounded-2xl bg-white/60 px-4 py-2.5">
+                <div className="text-ink-soft">Total do dia</div>
+                <div className="font-display text-lg font-bold text-teal">{formatBRL(totalDia)}</div>
+              </div>
+              <div className="rounded-2xl bg-white/60 px-4 py-2.5">
+                <div className="text-ink-soft">Atendimentos</div>
+                <div className="font-display text-lg font-bold text-ink">{finalizados.length}</div>
+              </div>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 rounded-2xl bg-white/40 px-4 py-2 text-[13px] text-ink-soft">
+              <span>💵 {formatBRL(porForma.Dinheiro)}</span>
+              <span>📱 {formatBRL(porForma.Pix)}</span>
+              <span>💳 {formatBRL(porForma["Cartão"])}</span>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3">
+              <label className="grid grid-cols-2 items-center gap-2">
+                <span className="font-display text-[13px] font-semibold text-ink">Fundo de caixa (troco)</span>
+                <input inputMode="decimal" value={fundo} onChange={(e) => setFundo(e.target.value.replace(/[^\d.,]/g, ""))} className="rounded-xl border border-line bg-white px-3 py-2 text-right font-display font-semibold text-ink focus:border-rosa" />
+              </label>
+              <label className="grid grid-cols-2 items-center gap-2">
+                <span className="font-display text-[13px] font-semibold text-ink">Dinheiro contado</span>
+                <input inputMode="decimal" value={contado} onChange={(e) => setContado(e.target.value.replace(/[^\d.,]/g, ""))} placeholder="conte a gaveta" className="rounded-xl border border-line bg-white px-3 py-2 text-right font-display font-semibold text-ink focus:border-rosa" />
+              </label>
+            </div>
+
+            <div className="mt-3 rounded-2xl bg-cream-2/60 px-4 py-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-ink-soft">Esperado em dinheiro</span>
+                <span className="font-display font-semibold text-ink tabular-nums">{formatBRL(esperadoDinheiro)}</span>
+              </div>
+              {divergenciaPrevia != null && (
+                <div className="mt-1 flex justify-between">
+                  <span className="text-ink-soft">Divergência</span>
+                  <span className={`font-display font-bold tabular-nums ${Math.abs(divergenciaPrevia) < 0.01 ? "text-[#3d8b93]" : divergenciaPrevia < 0 ? "text-rosa-deep" : "text-[#b5702a]"}`}>
+                    {divergenciaPrevia > 0 ? "+" : ""}
+                    {formatBRL(divergenciaPrevia)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <input value={obsFech} onChange={(e) => setObsFech(e.target.value)} placeholder="Observação (opcional)" className="mt-3 w-full rounded-xl border border-line bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-soft/70 focus:border-rosa" />
+
+            <div className="mt-5 flex gap-3">
+              <button onClick={() => setFecharAberto(false)} className="flex-1 rounded-full border border-line bg-white/70 px-5 py-3 font-display text-[15px] font-semibold text-ink transition hover:bg-white">Cancelar</button>
+              <button onClick={salvarFechamento} disabled={salvandoFech} className="flex-1 rounded-full bg-rosa px-5 py-3 font-display text-[15px] font-semibold text-white transition hover:bg-rosa-deep disabled:opacity-60">
+                {salvandoFech ? "..." : fechamento ? "Atualizar fechamento" : "Confirmar fechamento"}
+              </button>
             </div>
           </div>
         </div>

@@ -48,6 +48,40 @@ export default function RelatoriosPage() {
   const [ate, setAte] = useState(hoje);
   const [dados, setDados] = useState<Relatorio | null>(null);
   const [carregando, setCarregando] = useState(true);
+  const [backup, setBackup] = useState<{ data: string; criadoEm: string } | null>(null);
+  const [backupBusy, setBackupBusy] = useState(false);
+
+  const carregarBackup = useCallback(() => {
+    fetch("/api/backup")
+      .then((r) => r.json())
+      .then((d) => setBackup(d?.ultimo ?? null))
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    carregarBackup();
+  }, [carregarBackup]);
+
+  async function baixarBackup() {
+    setBackupBusy(true);
+    try {
+      await fetch("/api/backup/run"); // gera o snapshot de hoje
+      const r = await fetch("/api/backup/download", { cache: "no-store" });
+      if (r.ok) {
+        const blob = await r.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `backup-soumbolinho-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+      carregarBackup();
+    } finally {
+      setBackupBusy(false);
+    }
+  }
 
   function aplicarPreset(id: string) {
     setPreset(id);
@@ -225,6 +259,22 @@ export default function RelatoriosPage() {
           </div>
         </>
       )}
+
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-line bg-white/50 px-5 py-4">
+        <div>
+          <div className="font-display text-[15px] font-bold text-ink">🛟 Backup dos dados</div>
+          <div className="text-[13px] text-ink-soft">
+            {backup ? `Último: ${backup.data.split("-").reverse().join("/")}` : "Nenhum backup ainda"} · gerado automaticamente todo dia
+          </div>
+        </div>
+        <button
+          onClick={baixarBackup}
+          disabled={backupBusy}
+          className="flex-none rounded-full border border-lilas/50 bg-lilas/10 px-4 py-2 font-display text-[13px] font-semibold text-lilas transition hover:bg-lilas/20 disabled:opacity-60"
+        >
+          {backupBusy ? "..." : "⬇ Baixar backup agora"}
+        </button>
+      </div>
     </div>
   );
 }
