@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   let ok = false;
 
   if (pin) {
-    const cfg = await getConfig();
+    const cfg = await getConfig({ fresh: true });
     if (cfg.pinHash) {
       ok = await verifyPin(pin, cfg.pinHash); // PIN do banco tem prioridade
     } else if (PIN) {
@@ -69,11 +69,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: pin ? "PIN inválido." : "Usuário ou senha inválidos." }, { status: 401 });
   }
 
-  // Sucesso: registra, zera as falhas deste IP e faz uma poda oportunista dos registros antigos.
+  // Sucesso: registra e faz uma poda oportunista dos registros antigos.
+  // NÃO zeramos as falhas do IP no sucesso: isso deixaria um login por PIN limpar o
+  // contador que também freia o brute-force da senha mestra no PATCH /api/config.
+  // A janela deslizante de 15 min já expira as falhas sozinha.
   const umDiaAtras = new Date(Date.now() - 24 * 60 * 60_000);
   await Promise.all([
     prisma.acessoTentativa.create({ data: { ip, sucesso: true } }).catch(() => {}),
-    prisma.acessoTentativa.deleteMany({ where: { ip, sucesso: false } }).catch(() => {}),
     prisma.acessoTentativa.deleteMany({ where: { criadoEm: { lt: umDiaAtras } } }).catch(() => {}),
   ]);
 

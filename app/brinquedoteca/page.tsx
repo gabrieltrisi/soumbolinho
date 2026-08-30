@@ -128,8 +128,9 @@ export default function BrinquedotecaPage() {
     if (!checkout) return;
     const extra: Record<string, unknown> = {};
     if (ajustando) {
-      const v = Number(valorAjuste.replace(",", "."));
-      if (!Number.isFinite(v) || v < 0 || !motivo.trim()) return;
+      const raw = valorAjuste.trim();
+      const v = Number(raw.replace(",", "."));
+      if (!raw || !Number.isFinite(v) || v < 0 || !motivo.trim()) return;
       extra.valor = v;
       extra.motivoAjuste = motivo.trim();
     }
@@ -300,7 +301,7 @@ export default function BrinquedotecaPage() {
         const min = minutosEntre(checkout.entrada, now);
         const val = calcularValor(min, precos);
         const vNum = Number(valorAjuste.replace(",", "."));
-        const vNumValido = Number.isFinite(vNum) && vNum >= 0;
+        const vNumValido = valorAjuste.trim() !== "" && Number.isFinite(vNum) && vNum >= 0;
         const ajusteValido = !ajustando || (vNumValido && !!motivo.trim());
         const cobrar = ajustando && vNumValido ? vNum : val;
         return (

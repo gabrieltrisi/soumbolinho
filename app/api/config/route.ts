@@ -78,9 +78,19 @@ export async function PATCH(req: NextRequest) {
   const sessao = token ? await verificarSessao(token) : null;
   const atualizadoPor = sessao?.nome ?? null;
 
+  // Se ainda não há linha, o create herda a config vigente (env) nos campos omitidos —
+  // não deixa o default do schema sobrescrever um preço definido por ambiente.
+  const atual = await getConfig();
   const row = await prisma.configuracao.upsert({
     where: { id: 1 },
-    create: { id: 1, ...dados, atualizadoPor },
+    create: {
+      id: 1,
+      valorHora: dados.valorHora ?? atual.valorHora,
+      valorMinExcedente: dados.valorMinExcedente ?? atual.valorMinExcedente,
+      capacidade: dados.capacidade ?? atual.capacidade,
+      pinHash: dados.pinHash ?? atual.pinHash ?? undefined,
+      atualizadoPor,
+    },
     update: { ...dados, atualizadoPor },
   });
   invalidarConfig();

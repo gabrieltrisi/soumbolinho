@@ -25,13 +25,14 @@ export async function verifyPin(pin: string, stored: string): Promise<boolean> {
   const [tag, sN, sr, sp, saltHex, hashHex] = partes;
   if (tag !== "scrypt" || !saltHex || !hashHex) return false;
   const esperado = Buffer.from(hashHex, "hex");
+  if (esperado.length !== LEN) return false; // hash malformado → falha FECHADA (nunca autentica)
   try {
-    const dk = await scryptAsync(pin, Buffer.from(saltHex, "hex"), esperado.length, {
+    const dk = await scryptAsync(pin, Buffer.from(saltHex, "hex"), LEN, {
       N: Number(sN),
       r: Number(sr),
       p: Number(sp),
     });
-    return dk.length === esperado.length && timingSafeEqual(dk, esperado);
+    return timingSafeEqual(dk, esperado);
   } catch {
     return false;
   }

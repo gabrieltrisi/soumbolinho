@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useCriancas } from "../providers";
 
 export default function AjustesPage() {
+  const { recarregarConfig } = useCriancas();
   const [valorHora, setValorHora] = useState("");
   const [valorMin, setValorMin] = useState("");
   const [capacidade, setCapacidade] = useState("");
@@ -58,6 +60,7 @@ export default function AjustesPage() {
       setSenhaMestra("");
       setNovoPin("");
       setConfirmaPin("");
+      recarregarConfig(); // propaga preço/capacidade novos para as telas abertas
       setOk(pin ? "Ajustes salvos e PIN atualizado! 🎈" : "Ajustes salvos! 🎈");
       setTimeout(() => setOk(null), 6000);
     } catch (err) {

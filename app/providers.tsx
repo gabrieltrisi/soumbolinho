@@ -11,6 +11,7 @@ type Ctx = {
   carregando: boolean;
   capacidade: number;
   precos: Precos;
+  recarregarConfig: () => void;
 };
 
 const CriancasContext = createContext<Ctx | null>(null);
@@ -50,7 +51,7 @@ export function CriancasProvider({ children }: { children: React.ReactNode }) {
   }, [reload, carregarConfig]);
 
   return (
-    <CriancasContext.Provider value={{ lista, setLista, reload, carregando, capacidade, precos }}>
+    <CriancasContext.Provider value={{ lista, setLista, reload, carregando, capacidade, precos, recarregarConfig: carregarConfig }}>
       {children}
     </CriancasContext.Provider>
   );

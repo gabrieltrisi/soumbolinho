@@ -24,7 +24,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (crianca.saida) return NextResponse.json(crianca);
   const saida = new Date();
   const minutos = minutosEntre(crianca.entrada, saida);
-  const valorTabela = calcularValor(minutos, await getConfig());
+  const valorTabela = calcularValor(minutos, await getConfig({ fresh: true }));
   const formaPagamento = body?.formaPagamento ? String(body.formaPagamento) : null;
 
   // Ajuste opcional (cortesia, aniversariante, valor combinado).

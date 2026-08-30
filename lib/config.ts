@@ -17,8 +17,10 @@ function envNum(s: string | undefined, def: number): number {
   return Number.isFinite(n) && n > 0 ? n : def;
 }
 
-export async function getConfig(): Promise<Config> {
-  if (cache && cache.exp > Date.now()) return cache.v;
+// opts.fresh ignora o cache — usado nos caminhos de autoridade (check-out, login),
+// onde ler o valor vigente do banco importa mais que economizar uma query.
+export async function getConfig(opts?: { fresh?: boolean }): Promise<Config> {
+  if (!opts?.fresh && cache && cache.exp > Date.now()) return cache.v;
 
   let row: { valorHora: number; valorMinExcedente: number; capacidade: number; pinHash: string | null } | null = null;
   try {
