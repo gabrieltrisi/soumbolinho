@@ -1,11 +1,16 @@
 // Regra de cobrança da brinquedoteca (Só um Bolinho):
-//  - Mínimo de 1 hora: qualquer permanência < 60min = R$ 25.
-//  - Acima disso: horas cheias × R$25 + minutos restantes × R$2,
-//    com o excedente LIMITADO a R$25 (aí vira mais uma hora cheia).
-// Ex.: 45min→25 · 1h10→45 · 1h30→50 · 2h05→60.
+//  - Mínimo de 1 hora: qualquer permanência < 60min = valorHora.
+//  - Acima disso: horas cheias × valorHora + minutos restantes × valorMinExcedente,
+//    com o excedente LIMITADO a valorHora (aí vira mais uma hora cheia).
+// Ex. (25/2): 45min→25 · 1h10→45 · 1h30→50 · 2h05→60.
+//
+// Os preços são configuráveis (Tela de Ajustes). O parâmetro `precos` é
+// OBRIGATÓRIO de propósito: o servidor nunca cobra sem consultar a config vigente,
+// e o TypeScript aponta qualquer call-site que esqueça de injetar o preço.
 
-export const VALOR_HORA = 25;
-export const VALOR_MIN_EXCEDENTE = 2;
+export type Precos = { valorHora: number; valorMinExcedente: number };
+
+export const PRECOS_PADRAO: Precos = { valorHora: 25, valorMinExcedente: 2 };
 
 export function minutosEntre(entrada: Date | string | number, saida: Date | string | number): number {
   const a = new Date(entrada).getTime();
@@ -13,12 +18,12 @@ export function minutosEntre(entrada: Date | string | number, saida: Date | stri
   return Math.max(0, Math.floor((b - a) / 60000));
 }
 
-export function calcularValor(minutos: number): number {
-  if (minutos < 60) return VALOR_HORA; // mínimo 1 hora
+export function calcularValor(minutos: number, p: Precos): number {
+  if (minutos < 60) return p.valorHora; // mínimo 1 hora
   const horas = Math.floor(minutos / 60);
   const resto = minutos % 60;
-  const excedente = Math.min(resto * VALOR_MIN_EXCEDENTE, VALOR_HORA);
-  return horas * VALOR_HORA + excedente;
+  const excedente = Math.min(resto * p.valorMinExcedente, p.valorHora);
+  return horas * p.valorHora + excedente;
 }
 
 export function formatBRL(v: number): string {

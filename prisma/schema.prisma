@@ -57,6 +57,18 @@ model FechamentoCaixa {
   atualizadoEm    DateTime @updatedAt
 }
 
+/// Ajustes editáveis da recepção (linha única, id fixo = 1).
+/// Acesso sempre via prisma.configuracao.upsert({ where: { id: 1 }, ... }).
+model Configuracao {
+  id                Int      @id @default(1)
+  valorHora         Float    @default(25)
+  valorMinExcedente Float    @default(2)
+  capacidade        Int      @default(25)
+  pinHash           String? // "scrypt$N$r$p$saltHex$hashHex"; null = usa APP_PIN do ambiente
+  atualizadoEm      DateTime @updatedAt
+  atualizadoPor     String?
+}
+
 /// Snapshot diário de todos os dados (rede de segurança / backup).
 model Backup {
   id       Int      @id @default(autoincrement())

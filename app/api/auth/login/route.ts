@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 import { assinarSessao, cookieOpts, COOKIE } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { getConfig } from "@/lib/config";
+import { verifyPin } from "@/lib/pin";
 
 // Comparação de tempo constante (evita timing attack).
 function igual(a: string, b: string) {
@@ -46,8 +48,14 @@ export async function POST(req: NextRequest) {
   let ok = false;
 
   if (pin) {
-    if (!PIN) return NextResponse.json({ error: "PIN não configurado no servidor." }, { status: 500 });
-    ok = igual(pin, PIN);
+    const cfg = await getConfig();
+    if (cfg.pinHash) {
+      ok = await verifyPin(pin, cfg.pinHash); // PIN do banco tem prioridade
+    } else if (PIN) {
+      ok = igual(pin, PIN); // fallback do ambiente (recuperação)
+    } else {
+      return NextResponse.json({ error: "PIN não configurado no servidor." }, { status: 500 });
+    }
   } else {
     const usuario = String(b?.usuario ?? "").trim().toLowerCase();
     const senha = String(b?.senha ?? "");

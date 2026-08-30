@@ -42,7 +42,7 @@ type FechamentoRec = {
 };
 
 export default function CaixaPage() {
-  const { lista, setLista } = useCriancas();
+  const { lista, setLista, precos } = useCriancas();
   const now = useNow();
   const [editando, setEditando] = useState<Crianca | null>(null);
   const [removendo, setRemovendo] = useState<Crianca | null>(null);
@@ -94,8 +94,8 @@ export default function CaixaPage() {
   const totalDia = useMemo(() => finalizados.reduce((s, c) => s + (c.valor ?? 0), 0), [finalizados]);
   const ticketMedio = finalizados.length > 0 ? totalDia / finalizados.length : 0;
   const emAberto = useMemo(
-    () => lista.filter((c) => !c.saida).reduce((s, c) => s + calcularValor(minutosEntre(c.entrada, now)), 0),
-    [lista, now],
+    () => lista.filter((c) => !c.saida).reduce((s, c) => s + calcularValor(minutosEntre(c.entrada, now), precos), 0),
+    [lista, now, precos],
   );
   const porForma = useMemo(() => {
     const acc: Record<string, number> = { Dinheiro: 0, Pix: 0, "Cartão": 0 };

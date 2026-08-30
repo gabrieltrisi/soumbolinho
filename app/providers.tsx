@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { Crianca } from "@/lib/types";
+import { PRECOS_PADRAO, type Precos } from "@/lib/billing";
 
 type Ctx = {
   lista: Crianca[];
@@ -9,6 +10,7 @@ type Ctx = {
   reload: () => Promise<void>;
   carregando: boolean;
   capacidade: number;
+  precos: Precos;
 };
 
 const CriancasContext = createContext<Ctx | null>(null);
@@ -17,6 +19,7 @@ export function CriancasProvider({ children }: { children: React.ReactNode }) {
   const [lista, setLista] = useState<Crianca[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [capacidade, setCapacidade] = useState(25);
+  const [precos, setPrecos] = useState<Precos>(PRECOS_PADRAO);
 
   const reload = useCallback(async () => {
     const r = await fetch("/api/criancas", { cache: "no-store" });
@@ -24,18 +27,30 @@ export function CriancasProvider({ children }: { children: React.ReactNode }) {
     setCarregando(false);
   }, []);
 
-  useEffect(() => {
-    reload();
-    fetch("/api/config")
+  const carregarConfig = useCallback(() => {
+    fetch("/api/config", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
         if (d?.capacidade) setCapacidade(d.capacidade);
+        if (typeof d?.valorHora === "number" && typeof d?.valorMinExcedente === "number") {
+          setPrecos({ valorHora: d.valorHora, valorMinExcedente: d.valorMinExcedente });
+        }
       })
       .catch(() => {});
-  }, [reload]);
+  }, []);
+
+  useEffect(() => {
+    reload();
+    carregarConfig();
+    const onVis = () => {
+      if (document.visibilityState === "visible") carregarConfig();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [reload, carregarConfig]);
 
   return (
-    <CriancasContext.Provider value={{ lista, setLista, reload, carregando, capacidade }}>
+    <CriancasContext.Provider value={{ lista, setLista, reload, carregando, capacidade, precos }}>
       {children}
     </CriancasContext.Provider>
   );

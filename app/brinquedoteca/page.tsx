@@ -63,7 +63,7 @@ function SeletorForma({ value, onChange }: { value: string; onChange: (v: string
 }
 
 export default function BrinquedotecaPage() {
-  const { lista, setLista, capacidade } = useCriancas();
+  const { lista, setLista, capacidade, precos } = useCriancas();
   const now = useNow();
   const [busca, setBusca] = useState("");
   const [checkout, setCheckout] = useState<Crianca | null>(null);
@@ -220,7 +220,7 @@ export default function BrinquedotecaPage() {
           {grupos.map((grupo, gi) => {
             // Família (2+ crianças no mesmo telefone)
             if (grupo.length > 1) {
-              const totalFamilia = grupo.reduce((s, c) => s + calcularValor(minutosEntre(c.entrada, now)), 0);
+              const totalFamilia = grupo.reduce((s, c) => s + calcularValor(minutosEntre(c.entrada, now), precos), 0);
               return (
                 <li key={`fam-${gi}`} className="rounded-3xl border border-line bg-white/70 p-4">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-line/60 pb-3">
@@ -251,7 +251,7 @@ export default function BrinquedotecaPage() {
                             )}
                           </div>
                           <span className="rounded-full bg-cream-2 px-2.5 py-1 font-display text-[12px] font-semibold text-ink tabular-nums">⏱ {formatDuracao(min)}</span>
-                          <span className="font-display text-[15px] font-bold text-teal tabular-nums">{formatBRL(calcularValor(min))}</span>
+                          <span className="font-display text-[15px] font-bold text-teal tabular-nums">{formatBRL(calcularValor(min, precos))}</span>
                           {acoesMenu(c)}
                         </li>
                       );
@@ -264,7 +264,7 @@ export default function BrinquedotecaPage() {
             // Criança única
             const c = grupo[0];
             const min = minutosEntre(c.entrada, now);
-            const val = calcularValor(min);
+            const val = calcularValor(min, precos);
             return (
               <li key={c.id} className="flex items-start gap-4 rounded-3xl border border-line bg-white/70 p-4">
                 <span className={`grid h-12 w-12 flex-none place-items-center rounded-full font-display text-lg font-bold text-white ${DOT_COLORS[gi % DOT_COLORS.length]}`}>
@@ -298,7 +298,7 @@ export default function BrinquedotecaPage() {
       {/* Modal check-out individual */}
       {checkout && (() => {
         const min = minutosEntre(checkout.entrada, now);
-        const val = calcularValor(min);
+        const val = calcularValor(min, precos);
         const vNum = Number(valorAjuste.replace(",", "."));
         const vNumValido = Number.isFinite(vNum) && vNum >= 0;
         const ajusteValido = !ajustando || (vNumValido && !!motivo.trim());
@@ -388,7 +388,7 @@ export default function BrinquedotecaPage() {
 
       {/* Modal check-out família */}
       {checkoutFamilia && (() => {
-        const itens = checkoutFamilia.map((c) => ({ c, min: minutosEntre(c.entrada, now), val: calcularValor(minutosEntre(c.entrada, now)) }));
+        const itens = checkoutFamilia.map((c) => ({ c, min: minutosEntre(c.entrada, now), val: calcularValor(minutosEntre(c.entrada, now), precos) }));
         const total = itens.reduce((s, x) => s + x.val, 0);
         return (
           <div className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4 backdrop-blur-sm" onClick={() => setCheckoutFamilia(null)}>

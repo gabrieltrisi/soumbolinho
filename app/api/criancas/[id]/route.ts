@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { minutosEntre, calcularValor } from "@/lib/billing";
+import { getConfig } from "@/lib/config";
 
 // Check-out (action "checkout", padrão) ou reabrir (action "reopen").
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -23,7 +24,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (crianca.saida) return NextResponse.json(crianca);
   const saida = new Date();
   const minutos = minutosEntre(crianca.entrada, saida);
-  const valorTabela = calcularValor(minutos);
+  const valorTabela = calcularValor(minutos, await getConfig());
   const formaPagamento = body?.formaPagamento ? String(body.formaPagamento) : null;
 
   // Ajuste opcional (cortesia, aniversariante, valor combinado).

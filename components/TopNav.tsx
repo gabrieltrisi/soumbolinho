@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/brinquedoteca", label: "Brinquedoteca" },
   { href: "/caixa", label: "Caixa" },
   { href: "/relatorios", label: "Relatórios" },
+  { href: "/ajustes", label: "Ajustes" },
 ];
 
 export default function TopNav() {
