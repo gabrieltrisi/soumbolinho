@@ -77,6 +77,20 @@ export default function RelatoriosPage() {
     carregar();
   }, [carregar]);
 
+  async function exportarCsv() {
+    const r = await fetch(`/api/relatorios/csv?de=${de}&ate=${ate}`, { cache: "no-store" });
+    if (!r.ok) return;
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `relatorios-${de}_a_${ate}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
   const dias = useMemo(() => diasEntre(de, ate), [de, ate]);
   const maxDia = useMemo(() => Math.max(1, ...dias.map((d) => dados?.porDia[d] ?? 0)), [dias, dados]);
   const horas = useMemo(() => {
@@ -94,9 +108,19 @@ export default function RelatoriosPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
-      <div className="mb-5">
-        <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">Relatórios</h1>
-        <p className="mt-1 text-ink-soft">Faturamento e movimento por período.</p>
+      <div className="mb-5 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">Relatórios</h1>
+          <p className="mt-1 text-ink-soft">Faturamento e movimento por período.</p>
+        </div>
+        {dados && dados.atendimentos > 0 && (
+          <button
+            onClick={exportarCsv}
+            className="flex-none rounded-full border border-teal/50 bg-teal/10 px-4 py-2 font-display text-[13px] font-semibold text-teal transition hover:bg-teal/20"
+          >
+            ⬇ Exportar CSV
+          </button>
+        )}
       </div>
 
       {/* Período */}
